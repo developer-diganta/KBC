@@ -1,5 +1,7 @@
 package lifeLine;
 
+import question.Question;
+
 public interface LifeLine {
-    void useLifeLine();
+    <T> T useLifeLine(Question question);
 }

@@ -3,7 +3,7 @@ package question;
 import java.util.ArrayList;
 
 //question class with its appropriate fields and methods
-public class Question {
+public final class Question {
     private final String question;
     private final ArrayList<String> options;
     private final String answer;
