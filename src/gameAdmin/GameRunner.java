@@ -13,12 +13,18 @@ import java.util.Objects;
 import java.util.Scanner;
 
 public class GameRunner implements QuestionAdd {
-    private QuestionList questions;
-    private User user;
+    private final QuestionList questions;
+    private final User user;
+
+    private HashMap<String, Boolean> lifeLines;
     Scanner sc = new Scanner(System.in);
     public GameRunner() {
         questions = new QuestionList();
         user = new User();
+        lifeLines = new HashMap<>();
+        lifeLines.put("Audience Poll", true);
+        lifeLines.put("50:50", true);
+        lifeLines.put("Expert Advice", true);
     }
 
     private void acceptAnswer(Question question,int counter){
@@ -38,6 +44,7 @@ public class GameRunner implements QuestionAdd {
     public void addQuestions() {
 
         int noOfQuestions = 3;
+        System.out.println("Welcome To Game Admin Section. Please add 12 questions to be featured in the game");
         while (noOfQuestions > 0) {
             noOfQuestions--;
             String singleQuestion;
@@ -59,40 +66,53 @@ public class GameRunner implements QuestionAdd {
         }
     }
 
-    public void showQuestions() {
-        for (Question question : questions.getQuestionList()) {
-            System.out.println("Question: " + question.getQuestion());
-            System.out.println("Options:");
-            ArrayList<String> options = question.getOptions();
-            for (int i = 0; i < options.size(); i++) {
-                System.out.println("  Option " + (i + 1) + ": " + options.get(i));
+    public void showQuestion(Question question) {
+        System.out.println("Question: " + question.getQuestion());
+        System.out.println("Options:");
+        ArrayList<String> options = question.getOptions();
+        for (int i = 0; i < options.size(); i++) {
+            System.out.println("  Option " + (i + 1) + ": " + options.get(i));
+        }
+        System.out.println("Choose (A) Answer | (L) Life Line | (Q) Quit");
+    }
+
+    public void useLifeLine(String chosenLifeLine, Question question){
+        if(lifeLines.get(chosenLifeLine)){
+            System.out.println(chosenLifeLine);
+            if(Objects.equals(chosenLifeLine, "Audience Poll")){
+                HashMap<String,Integer> audiencePollResults = new AudiencePoll().useLifeLine(question);
+                for(var x:audiencePollResults.keySet()){
+                    System.out.println(x+"->"+audiencePollResults.get(x));
+                }
+                lifeLines.put("Audience Poll",false);
+            }else if(Objects.equals(chosenLifeLine, "50:50")){
+                ArrayList<String> fiftyFityOptions = new FiftyFiftyLifeLine().useLifeLine(question);
+                for(var x:fiftyFityOptions){
+                    System.out.println(x);
+                }
+                lifeLines.put("50:50",false);
+            }else if(Objects.equals(chosenLifeLine, "Expert Advice")){
+                String expertAnswer = new ExpertAdvice().useLifeLine(question);
+                System.out.println("Hmm! I think the correct answer is " + expertAnswer);
+                lifeLines.put("Expert Advice",false);
             }
-            System.out.println("Answer: " + question.getAnswer());
-            System.out.println();
+        }else{
+            System.out.println("Wrong Choice of Life Line");
         }
     }
 
     public void startGame() {
         Scanner sc = new Scanner(System.in);
-        HashMap<String, Boolean> lifeLines = new HashMap<>();
-        lifeLines.put("Audience Poll", true);
-        lifeLines.put("50:50", true);
-        lifeLines.put("Expert Advice", true);
+
         System.out.print("Enter your name: ");
         user.setName(sc.nextLine());
         System.out.println("Welcome to KBC, " + user.getName());
         System.out.println("Let's begin playing KBC!");
         int counter = 0;
         for (Question question : questions.getQuestionList()) {
-            System.out.println("Question: " + question.getQuestion());
-            System.out.println("Options:");
-            ArrayList<String> options = question.getOptions();
-            for (int i = 0; i < options.size(); i++) {
-                System.out.println("  Option " + (i + 1) + ": " + options.get(i));
-            }
-            System.out.println("Choose (A) Answer | (L) Life Line | (Q) Quit");
+            showQuestion(question);
             char response = sc.next().charAt(0);
-            sc.nextLine(); // Consume the newline character
+            sc.nextLine();
 
             switch (response) {
                 case 'A':
@@ -107,42 +127,22 @@ public class GameRunner implements QuestionAdd {
                         }
                     }
                     String chosenLifeLine = sc.nextLine();
-                    if(lifeLines.get(chosenLifeLine)){
-                       System.out.println(chosenLifeLine);
-                       if(Objects.equals(chosenLifeLine, "Audience Poll")){
-                           HashMap<String,Integer> audiencePollResults = new AudiencePoll().useLifeLine(question);
-                           for(var x:audiencePollResults.keySet()){
-                               System.out.println(x+"->"+audiencePollResults.get(x));
-                           }
-                           lifeLines.put("Audience Poll",false);
-                       }else if(Objects.equals(chosenLifeLine, "50:50")){
-                           ArrayList<String> fiftyFityOptions = new FiftyFiftyLifeLine().useLifeLine(question);
-                           for(var x:fiftyFityOptions){
-                               System.out.println(x);
-                           }
-                           lifeLines.put("50:50",false);
-                       }else if(Objects.equals(chosenLifeLine, "Expert Advice")){
-                           String expertAnswer = new ExpertAdvice().useLifeLine(question);
-                           System.out.println("Hmm! I think the correct answer is " + expertAnswer);
-                           lifeLines.put("Expert Advice",false);
-                       }
-                        acceptAnswer(question,counter);
-                        counter++;
-                    }else{
-                        System.out.println("Wrong Choice of Life Line");
-                        acceptAnswer(question,counter);
-                        counter++;
-                    }
+                    useLifeLine(chosenLifeLine,question);
+                    acceptAnswer(question,counter);
+                    counter++;
                     break;
                 case 'Q':
                     System.out.println("Thank You for playing Kaun Banega Crorepati! You have earned a total of Rs." + user.getEarnings());
                     return;
                 default:
-                    System.out.println("Invalid choice. Exiting the game.");
+                    System.out.println("Invalid choice. Please Answer the question");
+                    acceptAnswer(question,counter);
+                    counter++;
                     return;
             }
 
             System.out.println();
         }
+        System.out.println("Congratulations! You have won a prize money of Rs 1 Crore!");
     }
 }
