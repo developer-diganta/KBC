@@ -11,6 +11,7 @@ import java.io.*;
 import java.lang.reflect.Array;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
@@ -20,9 +21,33 @@ public class GameRunner implements QuestionAdd {
     private final QuestionList questions;
     private final User user;
 
+    private static final String URL = "jdbc:mysql://localhost:3306/kbc";
+
+    private static final String USERNAME="root";
+    private static final String PASSWORD = "password";
+
+    private final Connection CONN;
+
+    private final static String insertQuery = "INSERT INTO questions(question,Option1,Option2,Option3,Option4,CA) VALUES(?,?,?,?,?,?)";
+
+    private final static String getQuery = "SELECT * FROM questions";
+
+    private final static String deleteQuery = "DELETE * from questions WHERE id=?";
+
+    ResultSet getAllQuestionsResults;
     private HashMap<String, Boolean> lifeLines;
     Scanner sc = new Scanner(System.in);
-    public GameRunner() {
+    public GameRunner() throws SQLException {
+
+        try{
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        }catch(ClassNotFoundException e){
+            System.out.println(e.getMessage());
+        }
+
+        CONN = DriverManager.getConnection(URL,USERNAME,PASSWORD);
+        Statement statement = CONN.createStatement();
+
         questions = new QuestionList();
         user = new User();
         lifeLines = new HashMap<>();
@@ -31,7 +56,7 @@ public class GameRunner implements QuestionAdd {
         lifeLines.put("Expert Advice", true);
     }
 
-    private void acceptAnswer(Question question,int counter){
+    private void acceptAnswer(Question question,int counter) throws SQLException {
 
         System.out.print("Enter your answer: ");
         String userAnswer = sc.nextLine();
@@ -42,6 +67,7 @@ public class GameRunner implements QuestionAdd {
         } else {
             System.out.println("Sorry! The correct answer was " + question.getAnswer());
             System.out.println("Thank You for playing Kaun Banega Crorepati! You have earned a total of Rs." + user.getEarnings());
+            CONN.close();
             return;
         }
     }
@@ -75,16 +101,28 @@ public class GameRunner implements QuestionAdd {
         }
     }
 
-    public void addQuestions() {
-
-        int noOfQuestions = 1;
-        System.out.println("Welcome To Game Admin Section. Please add 12 questions to be featured in the game");
-        System.out.println("Want to load questions from file?(Y/N)");
-        String choice = sc.nextLine();
-        if(Objects.equals(choice, "Y") || Objects.equals(choice, "y")) {
-          loadQuestionsFromFile();
-          return;
+    public void viewQuestions() throws SQLException{
+        Statement statement = CONN.createStatement();
+        getAllQuestionsResults = statement.executeQuery(getQuery);
+        while(getAllQuestionsResults.next()){
+            String question = getAllQuestionsResults.getString("question");
+            String Option1 = getAllQuestionsResults.getString("Option1");
+            String Option2 = getAllQuestionsResults.getString("Option2");
+            String Option3 = getAllQuestionsResults.getString("Option3");
+            String Option4 = getAllQuestionsResults.getString("Option4");
+            String correctAnswer = getAllQuestionsResults.getString("CA");
+            System.out.println("Q: "+ question);
+            System.out.println("1: "+ Option1);
+            System.out.println("2: "+ Option2);
+            System.out.println("3: "+ Option3);
+            System.out.println("4: "+ Option4);
+            System.out.println("CA: "+ correctAnswer);
+            System.out.println("--------------------------------------------------------------------");
         }
+    }
+    public void addQuestions() throws SQLException{
+        int noOfQuestions = 1;
+        PreparedStatement preparedStatement = CONN.prepareStatement(insertQuery);
         while (noOfQuestions > 0) {
             noOfQuestions--;
             String singleQuestion;
@@ -101,9 +139,29 @@ public class GameRunner implements QuestionAdd {
 
             System.out.print("Enter Answer: ");
             String answer = sc.nextLine();
-            Path path = Paths.get("kbc_questions.txt");
-            question = new Question(singleQuestion, options, answer,path);
+//            Path path = Paths.get("kbc_questions.txt");
+            question = new Question(singleQuestion, options, answer, preparedStatement);
             questions.addQuestionToQuestionList(question);
+        }
+        preparedStatement.close();
+    }
+    public void adminSection() throws SQLException {
+        //        System.out.println("Want to load questions from file?(Y/N)");
+//        String choice = sc.nextLine();
+//        if(Objects.equals(choice, "Y") || Objects.equals(choice, "y")) {
+//          loadQuestionsFromFile();
+//          return;
+//        }
+        System.out.println("Welcome To Game Admin Section.");
+        System.out.println("Press V to view existing questions, A to add question, D to delete question, any other key to start the game");
+        String choice = sc.next();
+        if(choice.equals("V")){
+            //view questions
+            viewQuestions();
+        }else if(choice.equals("A")){
+            addQuestions();
+        }else{
+            return;
         }
     }
 
@@ -137,9 +195,16 @@ public class GameRunner implements QuestionAdd {
         }
     }
 
-    public void startGame() {
+    public void startGame() throws SQLException {
         Scanner sc = new Scanner(System.in);
-
+        Statement statement = CONN.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        getAllQuestionsResults = statement.executeQuery(getQuery);
+        getAllQuestionsResults.last();
+        int rows = getAllQuestionsResults.getRow();
+        if(rows<12){
+            System.out.println("Sorry! Not enough questions");
+            return;
+        }
         System.out.print("Enter your name: ");
         user.setName(sc.nextLine());
         System.out.println("Welcome to KBC, " + user.getName());
@@ -180,5 +245,6 @@ public class GameRunner implements QuestionAdd {
             System.out.println();
         }
         System.out.println("Congratulations! You have won a prize money of Rs 1 Crore!");
+        CONN.close();
     }
 }

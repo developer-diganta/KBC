@@ -1,5 +1,7 @@
 package gameAdmin;
 
+import java.sql.SQLException;
+
 public interface QuestionAdd {
-    void addQuestions();
+    void addQuestions() throws SQLException;
 }
