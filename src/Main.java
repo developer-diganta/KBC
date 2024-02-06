@@ -1,12 +1,13 @@
 import gameAdmin.GameRunner;
 
 import java.sql.SQLException;
+import java.util.concurrent.ExecutionException;
 
 //import user.User;
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws SQLException, InterruptedException, ExecutionException {
         GameRunner game = new GameRunner();
         game.adminSection();
         clearConsole();
